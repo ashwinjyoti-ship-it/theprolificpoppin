@@ -24,7 +24,7 @@ export default function Home() {
               Exploring awareness, identity, and the narratives we construct about ourselves.
             </p>
             <a href="/essays" className="inline-flex items-center gap-2 bg-accent/10 text-accent border border-accent/20 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-accent/20 transition-all">
-              Read Essays <span className="text-base">&rarr;</span>
+              Look Within <span className="text-base">&rarr;</span>
             </a>
           </div>
           {/* Right: Logo */}
