@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap');
+
+/* Theme variables */
+:root {
+  --bg: #0a0a0a;
+  --bg-card: #111111;
+  --bg-hover: #1a1a1a;
+  --accent: #c9a96e;
+  --accent-dim: #a08040;
+  --accent-light: #e0c990;
+  --tx: #e8e8e8;
+  --tx-muted: #888888;
+  --tx-dim: #555555;
+  --border: rgba(255,255,255,0.05);
+  --border-hover: rgba(255,255,255,0.1);
+}
+
+[data-theme="light"] {
+  --bg: #faf8f5;
+  --bg-card: #ffffff;
+  --bg-hover: #f0ede8;
+  --accent: #8b6914;
+  --accent-dim: #6b5010;
+  --accent-light: #a07a1a;
+  --tx: #1a1a1a;
+  --tx-muted: #555555;
+  --tx-dim: #888888;
+  --border: rgba(0,0,0,0.08);
+  --border-hover: rgba(0,0,0,0.15);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Essay prose styling */
+.essay-content h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+.essay-content h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--tx);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.essay-content p {
+  font-size: 1.125rem;
+  line-height: 1.85;
+  margin-bottom: 1.5rem;
+  color: var(--tx-muted);
+}
+.essay-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1.25rem;
+  margin: 2rem 0;
+  color: var(--tx-dim);
+  font-style: italic;
+}
+.essay-content strong { color: var(--tx); font-weight: 600; }
+.essay-content em { color: var(--accent); }
+
+/* Override Tailwind color classes to use CSS variables */
+.bg-bg { background-color: var(--bg) !important; }
+.bg-bg-card { background-color: var(--bg-card) !important; }
+.bg-bg-hover { background-color: var(--bg-hover) !important; }
+.text-tx { color: var(--tx) !important; }
+.text-tx-muted { color: var(--tx-muted) !important; }
+.text-tx-dim { color: var(--tx-dim) !important; }
+.text-accent { color: var(--accent) !important; }
+.text-accent-light { color: var(--accent-light) !important; }
+.border-accent { border-color: var(--accent) !important; }
+
+/* Theme-aware backgrounds for nav */
+[data-theme="light"] .bg-bg\/80 { background-color: rgba(250,248,245,0.8) !important; }
+
+/* Subtle animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.6s ease-out forwards; }
+.fade-up-delay { animation: fadeUp 0.6s ease-out 0.15s forwards; opacity: 0; }
+.fade-up-delay2 { animation: fadeUp 0.6s ease-out 0.3s forwards; opacity: 0; }
