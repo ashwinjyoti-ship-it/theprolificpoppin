@@ -1197,7 +1197,7 @@ And when the story drops, the love remains.
 ❧`,
     category: "the-unraveling",
     published: true,
-    featured: false,
+    featured: true,
     created_at: "2026-02-11",
     updated_at: "2026-02-11",
     read_time: 5,
