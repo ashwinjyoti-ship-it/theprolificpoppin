@@ -31,7 +31,7 @@ export const categories = [
   { key: "the-opening", label: "The Opening", tagline: "I\u2019m meeting life differently now", desc: "Living from wholeness instead of lack", order: 4 },
 ];
 
-const defaultEssays: Essay[] = [
+export const defaultEssays: Essay[] = [
   {
     id: 1,
     title: `When the Body Completes What the Mind Began: Hypertension as Healing Crisis`,
