@@ -73,7 +73,9 @@ export async function getFeaturedEssays(): Promise<Essay[]> {
 export async function saveFeaturedIds(ids: number[]) {
   await sql.begin(async tx => {
     await tx`delete from featured_essays`;
-    for (const [index, essayId] of ids.slice(0, 4).entries()) {
+    const featuredIds = ids.slice(0, 4);
+    for (let index = 0; index < featuredIds.length; index += 1) {
+      const essayId = featuredIds[index];
       await tx`
         insert into featured_essays (position, essay_id)
         values (${index + 1}, ${essayId})
