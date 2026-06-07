@@ -80,7 +80,7 @@ function excerpt(text: string, length = 280) {
 
 function scoreSource(questionTerms: string[], source: KnowledgeSourceCandidate) {
   const contentTerms = tokenize(`${source.heading || ""} ${source.content}`);
-  const titleTerms = tokenize(source.essayTitle);
+  const titleTerms = tokenize(source.essay_title);
   const contentMatches = questionTerms.filter(term => contentTerms.includes(term)).length;
   const titleMatches = questionTerms.filter(term => titleTerms.includes(term)).length;
   const slugMatches = questionTerms.filter(term => source.essaySlug.includes(term)).length;
