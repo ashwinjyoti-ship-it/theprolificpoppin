@@ -83,7 +83,7 @@ function scoreSource(questionTerms: string[], source: KnowledgeSourceCandidate) 
   const titleTerms = tokenize(source.essay_title);
   const contentMatches = questionTerms.filter(term => contentTerms.includes(term)).length;
   const titleMatches = questionTerms.filter(term => titleTerms.includes(term)).length;
-  const slugMatches = questionTerms.filter(term => source.essaySlug.includes(term)).length;
+  const slugMatches = questionTerms.filter(term => source.essay_slug.includes(term)).length;
 
   return contentMatches + titleMatches * 2 + slugMatches * 3;
 }
