@@ -1,14 +1,8 @@
-"use client";
-import { useEffect, useState } from "react";
-import { getPage } from "@/lib/data";
+import { getPage } from "@/lib/server-data";
 
-export default function AboutPage() {
-  const [content, setContent] = useState("");
-
-  useEffect(() => {
-    const page = getPage("about");
-    setContent(page?.content || "");
-  }, []);
+export default async function AboutPage() {
+  const page = await getPage("about");
+  const content = page?.content || "";
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 fade-up">

@@ -1,11 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, FormEvent, ChangeEvent } from "react";
 import mammoth from "mammoth";
-import {
-  Essay, PageContent, getEssays, saveEssay, deleteEssay,
-  getPages, savePage, isLoggedIn, login, logout, categories,
-  getFeaturedIds, saveFeaturedIds, getPublishedEssays
-} from "@/lib/data";
+import { Essay, PageContent, categories, isLoggedIn, login, logout } from "@/lib/data";
 
 type Tab = "essays" | "new" | "edit" | "pages" | "featured";
 
@@ -42,12 +38,22 @@ export default function AdminPage() {
   const [pageContent, setPageContent] = useState("");
 
   useEffect(() => { setAuthed(isLoggedIn()); }, []);
-  useEffect(() => { if (authed) { refresh(); } }, [authed]);
+  useEffect(() => { if (authed) { void refresh(); } }, [authed]);
 
-  function refresh() {
-    setEssays(getEssays());
-    setPages(getPages());
-    setFeaturedIds(getFeaturedIds());
+  async function refresh() {
+    const [essaysRes, pagesRes, featuredRes] = await Promise.all([
+      fetch("/api/essays"),
+      fetch("/api/pages"),
+      fetch("/api/featured"),
+    ]);
+
+    const essaysJson = await essaysRes.json();
+    const pagesJson = await pagesRes.json();
+    const featuredJson = await featuredRes.json();
+
+    setEssays(essaysJson.essays || []);
+    setPages(pagesJson.pages || []);
+    setFeaturedIds((featuredJson.essays || []).map((essay: Essay) => essay.id));
   }
 
   function handleLogin(e: FormEvent) {
@@ -75,21 +81,35 @@ export default function AdminPage() {
     setTab("edit");
   }
 
-  function handleSave(e: FormEvent) {
+  async function handleSave(e: FormEvent) {
     e.preventDefault();
-    saveEssay({
-      id: editId || undefined,
-      title, slug: slug || undefined, excerpt, content, category, published, featured,
+    const response = await fetch(editId ? `/api/essays/${editId}` : "/api/essays", {
+      method: editId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editId || undefined,
+        title,
+        slug: slug || undefined,
+        excerpt,
+        content,
+        category,
+        published,
+        featured,
+      }),
     });
+    if (!response.ok) {
+      alert("Could not save essay.");
+      return;
+    }
     resetForm();
     setTab("essays");
-    refresh();
+    await refresh();
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
     if (confirm("Delete this essay permanently?")) {
-      deleteEssay(id);
-      refresh();
+      await fetch(`/api/essays/${id}`, { method: "DELETE" });
+      await refresh();
     }
   }
 
@@ -99,13 +119,17 @@ export default function AdminPage() {
     setPageContent(page.content);
   }
 
-  function handlePageSave(e: FormEvent) {
+  async function handlePageSave(e: FormEvent) {
     e.preventDefault();
-    savePage({ page_key: pageKey, title: pageTitle, content: pageContent });
+    await fetch("/api/pages", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page_key: pageKey, title: pageTitle, content: pageContent }),
+    });
     setPageKey("");
     setPageTitle("");
     setPageContent("");
-    refresh();
+    await refresh();
   }
 
   async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
@@ -390,7 +414,15 @@ export default function AdminPage() {
           {/* Save button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <button
-              onClick={() => { saveFeaturedIds(featuredIds); setFeaturedSaved(true); setTimeout(() => setFeaturedSaved(false), 2000); }}
+              onClick={async () => {
+                await fetch("/api/featured", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ids: featuredIds }),
+                });
+                setFeaturedSaved(true);
+                setTimeout(() => setFeaturedSaved(false), 2000);
+              }}
               disabled={featuredIds.length !== 4}
               className={`w-full sm:w-auto px-6 sm:px-8 py-3 rounded-lg font-medium transition-all ${featuredIds.length === 4 ? "bg-accent text-bg hover:bg-accent-light" : "bg-white/5 text-tx-dim cursor-not-allowed"}`}>
               Save Featured
@@ -404,7 +436,7 @@ export default function AdminPage() {
           {/* All essays to pick from */}
           <div className="space-y-2 pt-4 border-t border-white/5">
             <h3 className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-3">All Published Essays</h3>
-            {getPublishedEssays().map(essay => {
+            {essays.filter(essay => essay.published).map(essay => {
               const isSelected = featuredIds.includes(essay.id);
               const cat = categories.find(c => c.key === essay.category);
               return (

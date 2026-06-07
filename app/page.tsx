@@ -1,13 +1,8 @@
-"use client";
-import { useEffect, useState } from "react";
-import { Essay, getFeaturedEssays, categories } from "@/lib/data";
+import { getFeaturedEssays } from "@/lib/server-data";
+import { categories } from "@/lib/data";
 
-export default function Home() {
-  const [featured, setFeatured] = useState<Essay[]>([]);
-
-  useEffect(() => {
-    setFeatured(getFeaturedEssays());
-  }, []);
+export default async function Home() {
+  const featured = await getFeaturedEssays();
 
   return (
     <div>
@@ -23,9 +18,14 @@ export default function Home() {
             <p className="text-tx-muted text-sm sm:text-base max-w-xl leading-relaxed mb-6">
               Exploring awareness, identity, and the narratives we construct about ourselves.
             </p>
-            <a href="/essays" className="inline-flex items-center gap-2 bg-accent/10 text-accent border border-accent/20 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-accent/20 transition-all">
-              Look Within <span className="text-base">&rarr;</span>
-            </a>
+            <div className="flex flex-wrap gap-3">
+              <a href="/essays" className="inline-flex items-center gap-2 bg-accent/10 text-accent border border-accent/20 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-accent/20 transition-all">
+                Look Within <span className="text-base">&rarr;</span>
+              </a>
+              <a href="/talk-to-mr-poppin" className="inline-flex items-center gap-2 bg-white/[0.03] text-tx border border-white/10 px-6 py-2.5 rounded-full text-sm font-medium hover:border-accent/20 hover:text-accent transition-all">
+                Talk to Mr. Poppin <span className="text-base">&rarr;</span>
+              </a>
+            </div>
           </div>
           {/* Right: Logo */}
           <div className="hidden lg:flex items-center justify-center shrink-0">

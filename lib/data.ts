@@ -18,9 +18,6 @@ export interface PageContent {
   content: string;
 }
 
-const STORAGE_KEY = "tpp_essays_v3";
-const PAGES_KEY = "tpp_pages";
-const FEATURED_KEY = "tpp_featured_ids";
 const AUTH_KEY = "tpp_auth";
 const ADMIN_PW = "popin2026";
 
@@ -2656,7 +2653,7 @@ This is not a call to transcend humanity, but to inhabit it more consciously. Th
   },
 ];
 
-const defaultPages: PageContent[] = [
+export const defaultPages: PageContent[] = [
   {
     page_key: "about", title: "About",
     content: "theprolificpoppin is a space for exploring consciousness, identity, and the narratives we construct about ourselves.\n\nThese essays sit at the intersection of ancient Vedic wisdom and modern understanding \u2014 examining the nature of awareness, the constructed self, emotions as transient weather, and the deep silence beneath all experience.\n\nThis is not an academic project. It is a personal one. Every essay here emerges from lived experience \u2014 from years of sitting with silence, working with sound, and watching the mind do what it does.\n\nThe name reflects an intention: to keep creating, keep questioning, keep producing work that matters. Not for productivity\u2019s sake, but because expression is how awareness comes to know itself."
@@ -2668,103 +2665,6 @@ const defaultPages: PageContent[] = [
 ];
 
 function isBrowser(): boolean { return typeof window !== "undefined"; }
-
-export function getEssays(): Essay[] {
-  if (!isBrowser()) return defaultEssays;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultEssays));
-    return defaultEssays;
-  }
-  return JSON.parse(stored);
-}
-
-export function getPublishedEssays(): Essay[] {
-  return getEssays().filter(e => e.published);
-}
-
-export function getFeaturedIds(): number[] {
-  if (!isBrowser()) return defaultEssays.filter(e => e.featured).map(e => e.id);
-  const stored = localStorage.getItem(FEATURED_KEY);
-  if (stored) return JSON.parse(stored);
-  return getEssays().filter(e => e.featured).map(e => e.id).slice(0, 4);
-}
-
-export function saveFeaturedIds(ids: number[]): void {
-  if (!isBrowser()) return;
-  localStorage.setItem(FEATURED_KEY, JSON.stringify(ids.slice(0, 4)));
-}
-
-export function getFeaturedEssays(): Essay[] {
-  const ids = getFeaturedIds();
-  const essays = getPublishedEssays();
-  return ids.map(id => essays.find(e => e.id === id)).filter(Boolean) as Essay[];
-}
-
-export function getEssayBySlug(slug: string): Essay | undefined {
-  return getEssays().find(e => e.slug === slug);
-}
-
-export function getEssaysByCategory(cat: string): Essay[] {
-  return getPublishedEssays().filter(e => e.category === cat);
-}
-
-export function saveEssay(essay: Partial<Essay> & { title: string; content: string; category: string }): Essay {
-  const essays = getEssays();
-  if (essay.id) {
-    const idx = essays.findIndex(e => e.id === essay.id);
-    if (idx >= 0) {
-      essays[idx] = { ...essays[idx], ...essay, updated_at: new Date().toISOString().split("T")[0] };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(essays));
-      return essays[idx];
-    }
-  }
-  const slug = essay.slug || essay.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const wordCount = essay.content.split(/\s+/).length;
-  const newEssay: Essay = {
-    id: Math.max(0, ...essays.map(e => e.id)) + 1,
-    title: essay.title,
-    slug,
-    excerpt: essay.excerpt || essay.content.substring(0, 150) + "...",
-    content: essay.content,
-    category: essay.category,
-    published: essay.published ?? true,
-    featured: essay.featured ?? false,
-    created_at: new Date().toISOString().split("T")[0],
-    updated_at: new Date().toISOString().split("T")[0],
-    read_time: Math.max(1, Math.ceil(wordCount / 200)),
-  };
-  essays.push(newEssay);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(essays));
-  return newEssay;
-}
-
-export function deleteEssay(id: number): void {
-  const essays = getEssays().filter(e => e.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(essays));
-}
-
-export function getPages(): PageContent[] {
-  if (!isBrowser()) return defaultPages;
-  const stored = localStorage.getItem(PAGES_KEY);
-  if (!stored) {
-    localStorage.setItem(PAGES_KEY, JSON.stringify(defaultPages));
-    return defaultPages;
-  }
-  return JSON.parse(stored);
-}
-
-export function getPage(key: string): PageContent | undefined {
-  return getPages().find(p => p.page_key === key);
-}
-
-export function savePage(page: PageContent): void {
-  const pages = getPages();
-  const idx = pages.findIndex(p => p.page_key === page.page_key);
-  if (idx >= 0) pages[idx] = page;
-  else pages.push(page);
-  localStorage.setItem(PAGES_KEY, JSON.stringify(pages));
-}
 
 export function checkAuth(pw: string): boolean { return pw === ADMIN_PW; }
 export function isLoggedIn(): boolean {

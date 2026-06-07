@@ -37,6 +37,7 @@ function Nav() {
         </a>
         <div className="flex items-center gap-4 sm:gap-8 text-sm">
           <a href="/essays" className="text-tx-muted hover:text-tx transition-colors">Essays</a>
+          <a href="/talk-to-mr-poppin" className="text-tx-muted hover:text-tx transition-colors">Talk to Mr. Poppin</a>
           <a href="/about" className="text-tx-muted hover:text-tx transition-colors">About</a>
           <a href="/author" className="text-tx-muted hover:text-tx transition-colors">Author</a>
           <ThemeToggle />
@@ -89,6 +90,7 @@ function Footer() {
         <p className="text-tx-dim text-sm">theprolificpoppin &copy; {new Date().getFullYear()}</p>
         <div className="flex gap-6 text-sm text-tx-dim">
           <a href="/essays" className="hover:text-tx-muted transition-colors">Essays</a>
+          <a href="/talk-to-mr-poppin" className="hover:text-tx-muted transition-colors">Talk to Mr. Poppin</a>
           <a href="/about" className="hover:text-tx-muted transition-colors">About</a>
           <a href="/author" className="hover:text-tx-muted transition-colors">Author</a>
           <a href="/admin" className="hover:text-tx-muted transition-colors">Admin</a>
