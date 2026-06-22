@@ -15,10 +15,15 @@ experience.
 ```bash
 npm install
 printf 'DATABASE_URL=postgres://...\n' > .env.local
+export DATABASE_URL='postgres://...'
 npm run db:bootstrap
 npm run db:seed
 npm run dev
 ```
+
+Next.js reads `.env.local` during app startup. The standalone database scripts
+read `process.env.DATABASE_URL` directly, so export the variable in the shell
+before running `db:bootstrap` or `db:seed`.
 
 Required `.env.local` values:
 
