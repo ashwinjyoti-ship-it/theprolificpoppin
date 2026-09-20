@@ -19,7 +19,6 @@ export interface PageContent {
 }
 
 const AUTH_KEY = "tpp_auth";
-const ADMIN_PW = "popin2026";
 
 export const categories = [
   { key: "the-ache", label: "The Ache", tagline: "I hurt and I don\u2019t know why", desc: "Pain, confusion, and the first stirrings of awareness", order: 1 },
@@ -2666,13 +2665,23 @@ export const defaultPages: PageContent[] = [
 
 function isBrowser(): boolean { return typeof window !== "undefined"; }
 
-export function checkAuth(pw: string): boolean { return pw === ADMIN_PW; }
 export function isLoggedIn(): boolean {
   if (!isBrowser()) return false;
   return sessionStorage.getItem(AUTH_KEY) === "true";
 }
-export function login(pw: string): boolean {
-  if (checkAuth(pw)) { sessionStorage.setItem(AUTH_KEY, "true"); return true; }
+export async function login(pw: string): Promise<boolean> {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: pw }),
+  });
+  if (response.ok && isBrowser()) {
+    sessionStorage.setItem(AUTH_KEY, "true");
+    return true;
+  }
   return false;
 }
-export function logout(): void { if (isBrowser()) sessionStorage.removeItem(AUTH_KEY); }
+export async function logout(): Promise<void> {
+  if (isBrowser()) sessionStorage.removeItem(AUTH_KEY);
+  await fetch("/api/auth/logout", { method: "POST" });
+}

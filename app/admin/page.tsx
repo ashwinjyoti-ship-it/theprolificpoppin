@@ -56,13 +56,13 @@ export default function AdminPage() {
     setFeaturedIds((featuredJson.essays || []).map((essay: Essay) => essay.id));
   }
 
-  function handleLogin(e: FormEvent) {
+  async function handleLogin(e: FormEvent) {
     e.preventDefault();
-    if (login(pw)) { setAuthed(true); setPwErr(false); }
+    if (await login(pw)) { setAuthed(true); setPwErr(false); }
     else { setPwErr(true); }
   }
 
-  function handleLogout() { logout(); setAuthed(false); }
+  async function handleLogout() { await logout(); setAuthed(false); }
 
   function resetForm() {
     setTitle(""); setSlug(""); setExcerpt(""); setContent("");
