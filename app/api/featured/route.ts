@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getFeaturedEssays, saveFeaturedIds } from "@/lib/server-data";
 import { isAuthorized, unauthorized } from "@/lib/auth";
 
@@ -14,6 +15,7 @@ export async function PUT(request: Request) {
   if (!isAuthorized(request)) return unauthorized();
   const body = await request.json();
   await saveFeaturedIds(body.ids || []);
+  revalidatePath("/");
   return NextResponse.json({ ok: true });
 }
 
