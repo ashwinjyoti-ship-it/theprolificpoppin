@@ -1,4 +1,3 @@
-import { categories } from "@/lib/data";
 import TalkToMrPoppinClient from "./TalkToMrPoppinClient";
 
 const starters = [
@@ -34,15 +33,6 @@ export default function TalkToMrPoppinPage() {
                 </span>
               ))}
             </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-3">
-            {categories.slice(0, 4).map(cat => (
-              <div key={cat.key} className="p-4 bg-bg-card border border-white/5 rounded-xl">
-                <p className="text-accent/70 text-[10px] font-mono uppercase tracking-widest mb-1">{cat.label}</p>
-                <p className="text-tx-muted text-sm italic">&ldquo;{cat.tagline}&rdquo;</p>
-              </div>
-            ))}
           </div>
         </section>
 

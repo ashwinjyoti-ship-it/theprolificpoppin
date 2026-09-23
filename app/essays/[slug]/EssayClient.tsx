@@ -1,5 +1,4 @@
 import type { Essay } from "@/lib/data";
-import { categories } from "@/lib/data";
 
 function stripEmojis(text: string): string {
   // eslint-disable-next-line no-control-regex
@@ -32,8 +31,6 @@ export default function EssayClient({
   essay: Essay;
   adjacent: { prev?: Essay; next?: Essay };
 }) {
-  const catInfo = categories.find(c => c.key === essay.category);
-
   return (
     <article className="fade-up">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
@@ -43,8 +40,6 @@ export default function EssayClient({
       <div className="essay-paper max-w-3xl mx-auto sm:mx-6 md:mx-auto">
       <header className="px-5 sm:px-12 pt-8 sm:pt-12 pb-6 sm:pb-8">
         <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-          <a href={`/essays?cat=${essay.category}`} className="text-accent text-xs font-mono uppercase tracking-wider hover:underline">{catInfo?.label || essay.category}</a>
-          <span className="text-tx-dim text-xs">&middot;</span>
           <span className="text-tx-dim text-xs font-mono">{essay.read_time || Math.max(1, Math.ceil(essay.content.split(/\s+/).length / 200))} min read</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight tracking-tight">{stripEmojis(essay.title)}</h1>

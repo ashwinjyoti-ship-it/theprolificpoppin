@@ -1,8 +1,15 @@
-import { getFeaturedEssays } from "@/lib/server-data";
-import { categories } from "@/lib/data";
+import { getFeaturedEssays, getPublishedEssays } from "@/lib/server-data";
 
 export default async function Home() {
-  const featured = await getFeaturedEssays();
+  const [featured, published] = await Promise.all([
+    getFeaturedEssays(),
+    getPublishedEssays(),
+  ]);
+
+  const featuredIds = new Set(featured.map(essay => essay.id));
+  const recent = published
+    .filter(essay => !featuredIds.has(essay.id))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <div>
@@ -38,70 +45,54 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Two-column: Categories sidebar + Featured */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-
-          {/* Left: Category Navigation */}
-          <div className="lg:w-52 shrink-0 fade-up-delay">
-            <h2 className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">The Stages</h2>
-
-            {/* Mobile: horizontal scroll with arrow indicator */}
-            <div className="relative lg:hidden">
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                {categories.map((cat, i) => (
-                  <a key={cat.key} href={`/essays?cat=${cat.key}`}
-                    className="group shrink-0 p-3.5 w-40 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 transition-all duration-300">
-                    <span className="text-accent/40 text-[10px] font-mono">{String(i + 1).padStart(2, "0")}</span>
-                    <h3 className="font-serif text-sm font-semibold mt-1 group-hover:text-accent transition-colors leading-tight">{cat.label}</h3>
-                    <p className="text-tx-muted text-[10px] mt-1 italic leading-snug">&ldquo;{cat.tagline}&rdquo;</p>
-                  </a>
-                ))}
-              </div>
-              <div className="absolute right-0 top-0 bottom-2 w-10 flex items-center justify-end pointer-events-none bg-gradient-to-l from-bg via-bg/80 to-transparent">
-                <svg className="w-4 h-4 text-tx-dim animate-pulse mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Desktop: vertical stack */}
-            <div className="hidden lg:flex flex-col gap-3">
-              {categories.map((cat, i) => (
-                <a key={cat.key} href={`/essays?cat=${cat.key}`}
-                  className="group px-4 py-3 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 transition-all duration-300">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-accent/40 text-[10px] font-mono">{String(i + 1).padStart(2, "0")}</span>
-                    <h3 className="font-serif text-sm font-semibold group-hover:text-accent transition-colors">{cat.label}</h3>
-                  </div>
-                  <p className="text-tx-muted text-[10px] italic leading-snug mt-1">&ldquo;{cat.tagline}&rdquo;</p>
+      {/* Essays shelf: featured + recent */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16 space-y-10 sm:space-y-12">
+        {featured.length > 0 && (
+          <div className="fade-up-delay">
+            <h2 className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">Featured</h2>
+            <div className="grid sm:grid-cols-2 gap-5">
+              {featured.map(essay => (
+                <a key={essay.id} href={`/essays/${essay.slug}`}
+                  className="group block p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
+                  <h3 className="font-serif text-base font-semibold mb-1.5 group-hover:text-accent transition-colors leading-snug line-clamp-2">{essay.title}</h3>
+                  <p className="text-tx-muted text-xs leading-relaxed line-clamp-2">{essay.excerpt}</p>
+                  <span className="text-tx-dim text-[10px] font-mono mt-3 block">{essay.read_time}m read</span>
                 </a>
               ))}
             </div>
           </div>
+        )}
 
-          {/* Right: Featured Essays */}
-          {featured.length > 0 && (
-            <div className="flex-1 fade-up-delay2">
-              <h2 className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">Featured</h2>
-              <div className="grid sm:grid-cols-2 gap-5">
-                {featured.map(essay => {
-                  const cat = categories.find(c => c.key === essay.category);
-                  return (
-                    <a key={essay.id} href={`/essays/${essay.slug}`}
-                      className="group block p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
-                      <span className="text-accent/60 text-[10px] font-mono uppercase tracking-wider">{cat?.label || essay.category}</span>
-                      <h3 className="font-serif text-base font-semibold mt-2 mb-1.5 group-hover:text-accent transition-colors leading-snug line-clamp-2">{essay.title}</h3>
-                      <p className="text-tx-muted text-xs leading-relaxed line-clamp-2">{essay.excerpt}</p>
-                      <span className="text-tx-dim text-[10px] font-mono mt-3 block">{essay.read_time}m read</span>
-                    </a>
-                  );
-                })}
-              </div>
+        {recent.length > 0 && (
+          <div className="fade-up-delay2">
+            <div className="flex items-baseline justify-between gap-4 mb-4">
+              <h2 className="text-tx-dim text-xs font-mono tracking-widest uppercase">
+                {featured.length > 0 ? "More Essays" : "Essays"}
+              </h2>
+              <a href="/essays" className="text-accent text-xs font-mono hover:underline">
+                View all &rarr;
+              </a>
             </div>
-          )}
+            <div className="space-y-4">
+              {recent.map(essay => (
+                <a key={essay.id} href={`/essays/${essay.slug}`}
+                  className="group block p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
+                    <h3 className="font-serif text-base sm:text-lg font-semibold group-hover:text-accent transition-colors leading-snug">
+                      {essay.title}
+                    </h3>
+                    <span className="text-tx-dim text-[10px] font-mono shrink-0">{essay.read_time}m read</span>
+                  </div>
+                  <p className="text-tx-muted text-xs sm:text-sm leading-relaxed mt-1.5 line-clamp-2">{essay.excerpt}</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
-        </div>
+        {featured.length === 0 && recent.length === 0 && (
+          <p className="text-tx-dim text-center py-8 fade-up-delay">Essays coming soon.</p>
+        )}
       </section>
     </div>
   );
