@@ -8,6 +8,7 @@ function stripEmojis(text: string): string {
 
 function renderContent(content: string) {
   return content.split("\n").map((line, i) => {
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return <hr key={i} />;
     if (line.startsWith("## ")) {
       return <h2 key={i}>{stripEmojis(line.replace("## ", ""))}</h2>;
     }
@@ -35,8 +36,12 @@ export default function EssayClient({
 
   return (
     <article className="fade-up">
-      <header className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-8 sm:pb-10 border-b border-white/5">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
         <a href="/essays" className="text-tx-dim text-sm hover:text-accent transition-colors mb-4 sm:mb-6 inline-block">&larr; All Essays</a>
+      </div>
+
+      <div className="essay-paper max-w-3xl mx-auto sm:mx-6 md:mx-auto">
+      <header className="px-5 sm:px-12 pt-8 sm:pt-12 pb-6 sm:pb-8">
         <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
           <a href={`/essays?cat=${essay.category}`} className="text-accent text-xs font-mono uppercase tracking-wider hover:underline">{catInfo?.label || essay.category}</a>
           <span className="text-tx-dim text-xs">&middot;</span>
@@ -45,8 +50,9 @@ export default function EssayClient({
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight tracking-tight">{stripEmojis(essay.title)}</h1>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 essay-content">
+      <div className="px-5 sm:px-12 pb-10 sm:pb-14 essay-content">
         {renderContent(essay.content)}
+      </div>
       </div>
 
       <nav className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 border-t border-white/5">
