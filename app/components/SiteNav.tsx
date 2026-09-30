@@ -11,42 +11,39 @@ const links = [
 
 function getTheme(): "dark" | "light" {
   if (typeof document === "undefined") return "dark";
-  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  return document.documentElement.getAttribute("data-theme") === "light"
+    ? "light"
+    : "dark";
 }
 
-function ThemeToggle({ className = "" }: { className?: string }) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    setTheme(getTheme());
-  }, []);
-
-  function toggle() {
-    const next = getTheme() === "light" ? "dark" : "light";
-    if (next === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-    try {
-      localStorage.setItem("tpp_theme", next);
-    } catch {
-      /* ignore */
-    }
-    setTheme(next);
-  }
-
+function ThemeToggle({
+  className = "",
+  theme,
+  onToggle,
+}: {
+  className?: string;
+  theme: "dark" | "light";
+  onToggle: () => void;
+}) {
   const isDark = theme !== "light";
 
   return (
     <button
       type="button"
       aria-label="Toggle light/dark mode"
-      onClick={toggle}
+      onClick={onToggle}
       className={`flex items-center justify-center rounded-full text-tx-dim hover:text-accent transition-colors ${className}`}
     >
       {isDark ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />
@@ -58,7 +55,15 @@ function ThemeToggle({ className = "" }: { className?: string }) {
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
       ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}
@@ -68,7 +73,12 @@ function ThemeToggle({ className = "" }: { className?: string }) {
 
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const menuId = useId();
+
+  useEffect(() => {
+    setTheme(getTheme());
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -86,6 +96,21 @@ export default function SiteNav() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  function toggleTheme() {
+    const next = getTheme() === "light" ? "dark" : "light";
+    if (next === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    try {
+      localStorage.setItem("tpp_theme", next);
+    } catch {
+      /* ignore */
+    }
+    setTheme(next);
+  }
 
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-md bg-bg/80 border-b border-white/5">
@@ -109,12 +134,20 @@ export default function SiteNav() {
               {link.label}
             </a>
           ))}
-          <ThemeToggle className="w-8 h-8" />
+          <ThemeToggle
+            className="w-8 h-8"
+            theme={theme}
+            onToggle={toggleTheme}
+          />
         </div>
 
         {/* Phone: theme + compact menu so the wordmark keeps a clean row */}
         <div className="flex md:hidden items-center gap-0.5">
-          <ThemeToggle className="w-10 h-10" />
+          <ThemeToggle
+            className="w-10 h-10"
+            theme={theme}
+            onToggle={toggleTheme}
+          />
           <button
             type="button"
             className="w-10 h-10 flex items-center justify-center rounded-full text-tx-muted hover:text-tx transition-colors"
@@ -124,12 +157,28 @@ export default function SiteNav() {
             onClick={() => setOpen((v) => !v)}
           >
             {open ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
                 <line x1="4" y1="7" x2="20" y2="7" />
                 <line x1="4" y1="12" x2="20" y2="12" />
                 <line x1="4" y1="17" x2="20" y2="17" />
