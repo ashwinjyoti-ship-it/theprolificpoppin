@@ -7,3 +7,4 @@ out/
 
 # TypeScript incremental cache
 *.tsbuildinfo
+.playwright-mcp/
