@@ -14,10 +14,10 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-8 sm:pb-12 fade-up">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-8 sm:pb-12 fade-up">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
           {/* Left: Text */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="text-accent text-xs sm:text-sm font-mono tracking-widest uppercase mb-3">Essays on Consciousness</p>
             <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.15] tracking-tight mb-4">
               The space between<br /><span className="text-accent">thought and silence</span>
@@ -25,21 +25,21 @@ export default async function Home() {
             <p className="text-tx-muted text-sm sm:text-base max-w-xl leading-relaxed mb-6">
               Exploring awareness, identity, and the narratives we construct about ourselves.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <a href="/essays" className="inline-flex items-center gap-2 bg-accent/10 text-accent border border-accent/20 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-accent/20 transition-all">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              <a href="/essays" className="inline-flex items-center justify-center gap-2 bg-accent/10 text-accent border border-accent/20 px-6 py-3 sm:py-2.5 rounded-full text-sm font-medium hover:bg-accent/20 transition-all min-h-[44px]">
                 Look Within <span className="text-base">&rarr;</span>
               </a>
-              <a href="/talk-to-mr-poppin" className="inline-flex items-center gap-2 bg-white/[0.03] text-tx border border-white/10 px-6 py-2.5 rounded-full text-sm font-medium hover:border-accent/20 hover:text-accent transition-all">
+              <a href="/talk-to-mr-poppin" className="inline-flex items-center justify-center gap-2 bg-white/[0.03] text-tx border border-white/10 px-6 py-3 sm:py-2.5 rounded-full text-sm font-medium hover:border-accent/20 hover:text-accent transition-all min-h-[44px]">
                 Talk to Mr. Poppin <span className="text-base">&rarr;</span>
               </a>
             </div>
           </div>
-          {/* Right: Logo */}
-          <div className="hidden lg:flex items-center justify-center shrink-0">
+          {/* Logo: visible on phone/tablet with real space; desktop keeps the side treatment */}
+          <div className="flex items-center justify-center shrink-0 lg:justify-end">
             <img
               src="/logo.png"
               alt="theprolificpoppin — consciousness and technology"
-              className="w-56 h-56 xl:w-64 xl:h-64 opacity-90 hover:opacity-100 transition-opacity duration-500"
+              className="w-36 h-36 sm:w-44 sm:h-44 lg:w-56 lg:h-56 xl:w-64 xl:h-64 opacity-90 hover:opacity-100 transition-opacity duration-500"
             />
           </div>
         </div>
@@ -50,12 +50,12 @@ export default async function Home() {
         {featured.length > 0 && (
           <div className="fade-up-delay">
             <h2 className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">Featured</h2>
-            <div className="grid sm:grid-cols-2 gap-5">
+            <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
               {featured.map(essay => (
                 <a key={essay.id} href={`/essays/${essay.slug}`}
-                  className="group block p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
-                  <h3 className="font-serif text-base font-semibold mb-1.5 group-hover:text-accent transition-colors leading-snug line-clamp-2">{essay.title}</h3>
-                  <p className="text-tx-muted text-xs leading-relaxed line-clamp-2">{essay.excerpt}</p>
+                  className="group block p-4 sm:p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
+                  <h3 className="font-serif text-base font-semibold mb-1.5 group-hover:text-accent transition-colors leading-snug line-clamp-2 break-words">{essay.title}</h3>
+                  <p className="text-tx-muted text-xs leading-relaxed line-clamp-2 break-words">{essay.excerpt}</p>
                   <span className="text-tx-dim text-[10px] font-mono mt-3 block">{essay.read_time}m read</span>
                 </a>
               ))}
@@ -76,14 +76,14 @@ export default async function Home() {
             <div className="space-y-4">
               {recent.map(essay => (
                 <a key={essay.id} href={`/essays/${essay.slug}`}
-                  className="group block p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
+                  className="group block p-4 sm:p-5 bg-bg-card border border-white/5 rounded-lg hover:border-accent/20 hover:bg-bg-hover transition-all duration-300">
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
-                    <h3 className="font-serif text-base sm:text-lg font-semibold group-hover:text-accent transition-colors leading-snug">
+                    <h3 className="font-serif text-base sm:text-lg font-semibold group-hover:text-accent transition-colors leading-snug break-words min-w-0">
                       {essay.title}
                     </h3>
                     <span className="text-tx-dim text-[10px] font-mono shrink-0">{essay.read_time}m read</span>
                   </div>
-                  <p className="text-tx-muted text-xs sm:text-sm leading-relaxed mt-1.5 line-clamp-2">{essay.excerpt}</p>
+                  <p className="text-tx-muted text-xs sm:text-sm leading-relaxed mt-1.5 line-clamp-2 break-words">{essay.excerpt}</p>
                 </a>
               ))}
             </div>
