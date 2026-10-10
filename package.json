@@ -12,14 +12,18 @@
     "db:seed": "node --experimental-strip-types scripts/seed-neon.mjs"
   },
   "dependencies": {
+    "@auth/pg-adapter": "^1.11.3",
     "mammoth": "^1.11.0",
-    "postgres": "^3.4.9",
     "next": "^14.2.35",
+    "next-auth": "^5.0.0-beta.32",
+    "pg": "^8.23.1",
+    "postgres": "^3.4.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^18.3.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",

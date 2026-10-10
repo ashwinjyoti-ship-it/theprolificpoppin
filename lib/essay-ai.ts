@@ -245,6 +245,8 @@ export async function saveDiscussionExchange(params: {
   sources: EssayKnowledgeSource[];
   essayId?: number | null;
   threadId?: string | null;
+  userId?: string | null;
+  anonymousId?: string | null;
 }) {
   const thread = params.threadId
     ? (
@@ -255,6 +257,8 @@ export async function saveDiscussionExchange(params: {
               user_prompt = ${params.question},
               assistant_summary = ${params.answer},
               status = ${"answered"},
+              user_id = coalesce(${params.userId || null}, user_id),
+              anonymous_id = coalesce(anonymous_id, ${params.anonymousId || null}::uuid),
               updated_at = now()
           where id = ${params.threadId}
           returning id
@@ -262,8 +266,18 @@ export async function saveDiscussionExchange(params: {
       )[0]
     : (
         await sql<{ id: string }[]>`
-          insert into ai_discussion_threads (essay_id, thread_title, user_prompt, assistant_summary, status)
-          values (${params.essayId || null}, ${excerpt(params.question, 120)}, ${params.question}, ${params.answer}, ${"answered"})
+          insert into ai_discussion_threads (
+            essay_id, thread_title, user_prompt, assistant_summary, status, user_id, anonymous_id
+          )
+          values (
+            ${params.essayId || null},
+            ${excerpt(params.question, 120)},
+            ${params.question},
+            ${params.answer},
+            ${"answered"},
+            ${params.userId || null},
+            ${params.anonymousId || null}::uuid
+          )
           returning id
         `
       )[0];

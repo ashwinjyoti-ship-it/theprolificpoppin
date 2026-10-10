@@ -43,6 +43,7 @@ Keys are server-side only. Never expose them to the client.
 - Questions are stored in Neon (`ai_discussion_*`) to improve the archive; the page discloses this in one line.
 - Thread id is persisted in `localStorage` and restored via `GET /api/ai/query?threadId=…`.
 - Anthropic Sonnet 5.5: sends `thinking: { type: "between_tools" }` (docs reject `"disabled"` on this model) plus `output_config.effort: "low"` so up-front thinking does not eat `max_tokens`. `maxOutputTokens` is 2048. If `stop_reason` is still `max_tokens`, incomplete markdown links are stripped before the reader sees them.
+- Free taste + sign-in: anonymous 5/day (IST) durable in Neon (cookie + IP); signed-in 50/day. See `docs/reader-auth-setup.md` and migration `db/migrations/20261010_reader_auth_and_quota.sql`.
 
 ## How retrieval works today
 
