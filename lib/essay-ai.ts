@@ -1,5 +1,6 @@
+import { AI_LIMITS } from "@/lib/ai-config";
 import { sql } from "@/lib/db";
-import { buildDiscussionPrompt } from "@/lib/knowledge";
+import { buildDiscussionPrompt, MR_POPPIN_OPENING } from "@/lib/knowledge";
 
 type KnowledgeRow = {
   essay_id: number | string;
@@ -68,6 +69,9 @@ const STOP_WORDS = new Set([
   "you",
 ]);
 
+const CHIT_CHAT_RE =
+  /^(hi|hello|hey|yo|sup|howdy|good\s+(morning|afternoon|evening)|thanks|thank\s+you|thx|ok|okay|cool|nice|bye|goodbye|see\s+ya|what'?s\s+up|how\s+are\s+you|who\s+are\s+you|what\s+can\s+you\s+do)[\s!.?]*$/i;
+
 function tokenize(text: string) {
   return (text.toLowerCase().match(/[a-z0-9]+/g) || []).filter(word => word.length > 2 && !STOP_WORDS.has(word));
 }
@@ -78,7 +82,7 @@ function excerpt(text: string, length = 280) {
   return `${compact.slice(0, length).trim()}...`;
 }
 
-function scoreSource(questionTerms: string[], source: KnowledgeSourceCandidate) {
+function scoreSource(questionTerms: string[], source: KnowledgeRow) {
   const contentTerms = tokenize(`${source.heading || ""} ${source.content}`);
   const titleTerms = tokenize(source.essay_title);
   const contentMatches = questionTerms.filter(term => contentTerms.includes(term)).length;
@@ -88,9 +92,24 @@ function scoreSource(questionTerms: string[], source: KnowledgeSourceCandidate) 
   return contentMatches + titleMatches * 2 + slugMatches * 3;
 }
 
-type KnowledgeSourceCandidate = KnowledgeRow;
+/** Greetings / small talk should not pull random essay chunks. */
+export function isChitChat(question: string): boolean {
+  const trimmed = question.trim();
+  if (!trimmed) return true;
+  if (trimmed.length <= 24 && CHIT_CHAT_RE.test(trimmed)) return true;
+  const terms = tokenize(trimmed);
+  return terms.length === 0 && trimmed.length < 40;
+}
 
-export async function retrieveEssaySources(question: string, essaySlug?: string, limit = 6): Promise<EssayKnowledgeSource[]> {
+export async function retrieveEssaySources(
+  question: string,
+  essaySlug?: string,
+  limit = 6,
+): Promise<EssayKnowledgeSource[]> {
+  if (!essaySlug && isChitChat(question)) {
+    return [];
+  }
+
   const rows = await sql<KnowledgeRow[]>`
     select
       e.id as essay_id,
@@ -110,6 +129,10 @@ export async function retrieveEssaySources(question: string, essaySlug?: string,
   `;
 
   const questionTerms = tokenize(question);
+  if (questionTerms.length === 0 && !essaySlug) {
+    return [];
+  }
+
   const ranked = rows
     .map(row => ({
       essayId: Number(row.essay_id),
@@ -123,7 +146,7 @@ export async function retrieveEssaySources(question: string, essaySlug?: string,
       content: row.content,
       score: scoreSource(questionTerms, row),
     }))
-    .filter(row => row.score > 0 || essaySlug)
+    .filter(row => row.score > 0 || Boolean(essaySlug))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       if (a.essayId !== b.essayId) return a.essayId - b.essayId;
@@ -131,20 +154,8 @@ export async function retrieveEssaySources(question: string, essaySlug?: string,
     })
     .slice(0, limit);
 
-  return ranked.length > 0
-    ? ranked
-    : rows.slice(0, limit).map(row => ({
-        essayId: Number(row.essay_id),
-        essaySlug: row.essay_slug,
-        essayTitle: row.essay_title,
-        essayCategory: row.essay_category,
-        chunkId: Number(row.chunk_id),
-        chunkOrder: row.chunk_order,
-        kind: row.kind,
-        heading: row.heading,
-        content: row.content,
-        score: 0,
-      }));
+  // Never fall back to arbitrary score-0 chunks — that made "Hi" return childhood passages.
+  return ranked;
 }
 
 export async function getDiscussionMessages(threadId: string): Promise<DiscussionMessage[]> {
@@ -158,12 +169,32 @@ export async function getDiscussionMessages(threadId: string): Promise<Discussio
   return rows;
 }
 
+/** Cap history by turn count and approximate character budget (cheapest token proxy). */
+export function trimHistory(history: DiscussionMessage[]): DiscussionMessage[] {
+  const recent = history.slice(-AI_LIMITS.maxHistoryTurns * 2);
+  let total = 0;
+  const kept: DiscussionMessage[] = [];
+
+  for (let i = recent.length - 1; i >= 0; i -= 1) {
+    const message = recent[i];
+    if (!message) continue;
+    const len = message.content.length;
+    if (total + len > AI_LIMITS.maxHistoryChars && kept.length > 0) break;
+    kept.unshift(message);
+    total += len;
+  }
+
+  return kept;
+}
+
 export function buildContextBlock(sources: EssayKnowledgeSource[]) {
+  if (sources.length === 0) return "";
+
   return sources
     .map((source, index) => {
       const heading = source.heading ? `Heading: ${source.heading}\n` : "";
       return [
-        `Source ${index + 1}: ${source.essayTitle} (${source.essaySlug})`,
+        `Source ${index + 1}: ${source.essayTitle} (/essays/${source.essaySlug})`,
         heading.trim(),
         `Excerpt: ${excerpt(source.content)}`,
       ]
@@ -177,31 +208,35 @@ export function buildSystemPrompt() {
   return buildDiscussionPrompt().system;
 }
 
-export function buildUserPrompt(
-  question: string,
-  sources: EssayKnowledgeSource[],
-  history: DiscussionMessage[] = [],
-) {
-  const conversation = history.length > 0
-    ? [
-        "Conversation so far:",
-        ...history.map(message => `${message.role === "assistant" ? "Assistant" : "User"}: ${message.content}`),
-        "",
-      ].join("\n")
-    : "";
+export function getOpeningLine() {
+  return MR_POPPIN_OPENING;
+}
+
+/**
+ * Archive-only reply when no model key is set.
+ * Speaks like Mr. Poppin without promising (or admitting) an unconfigured model.
+ */
+export function buildArchiveOnlyAnswer(question: string, sources: EssayKnowledgeSource[]): string {
+  if (isChitChat(question) || sources.length === 0) {
+    if (isChitChat(question)) {
+      return `${MR_POPPIN_OPENING}\n\n(I'm quieter when the conversation tools are offline — try a theme from the essays: attention, desire, the body, conditioning.)`;
+    }
+    return `I don't have a clean match in the archive for that. Try naming a theme the essays care about — attention, desire, the body, consciousness — or an essay title you remember.`;
+  }
+
+  const top = sources.slice(0, 2);
+  const lines = top.map(source => {
+    const bit = excerpt(source.content, 160);
+    return `In [${source.essayTitle}](/essays/${source.essaySlug})${source.heading ? ` (${source.heading})` : ""}: ${bit}`;
+  });
 
   return [
-    `User question: ${question}`,
+    "Here's where the essays look at something close to what you asked:",
     "",
-    conversation,
-    conversation ? "" : undefined,
-    "Relevant essay context:",
-    buildContextBlock(sources),
+    ...lines,
     "",
-    "Answer with grounded reasoning. Cite essay slugs or headings when useful. If the context is thin, say that plainly.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+    "Sit with whichever line lands. Notice what your body does when you read it — that's the experiment.",
+  ].join("\n");
 }
 
 export async function saveDiscussionExchange(params: {
@@ -243,7 +278,13 @@ export async function saveDiscussionExchange(params: {
       ${thread.id},
       ${"user"},
       ${params.question},
-      ${JSON.stringify({ sources: params.sources.map(source => ({ essaySlug: source.essaySlug, chunkId: source.chunkId, heading: source.heading })) })}::jsonb
+      ${JSON.stringify({
+        sources: params.sources.map(source => ({
+          essaySlug: source.essaySlug,
+          chunkId: source.chunkId,
+          heading: source.heading,
+        })),
+      })}::jsonb
     )
   `;
 
@@ -253,9 +294,29 @@ export async function saveDiscussionExchange(params: {
       ${thread.id},
       ${"assistant"},
       ${params.answer},
-      ${JSON.stringify({ sources: params.sources.map(source => ({ essaySlug: source.essaySlug, chunkId: source.chunkId, heading: source.heading, score: source.score })) })}::jsonb
+      ${JSON.stringify({
+        sources: params.sources.map(source => ({
+          essaySlug: source.essaySlug,
+          chunkId: source.chunkId,
+          heading: source.heading,
+        })),
+      })}::jsonb
     )
   `;
 
   return thread.id;
+}
+
+export function publicSources(sources: EssayKnowledgeSource[]) {
+  return sources.map(source => ({
+    essayId: source.essayId,
+    essaySlug: source.essaySlug,
+    essayTitle: source.essayTitle,
+    essayCategory: source.essayCategory,
+    chunkId: source.chunkId,
+    chunkOrder: source.chunkOrder,
+    kind: source.kind,
+    heading: source.heading,
+    excerpt: source.content.slice(0, 240).trim(),
+  }));
 }

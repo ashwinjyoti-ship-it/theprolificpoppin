@@ -39,7 +39,6 @@ function Footer() {
           <a href="/talk-to-mr-poppin" className="hover:text-tx-muted transition-colors py-1">Talk to Mr. Poppin</a>
           <a href="/about" className="hover:text-tx-muted transition-colors py-1">About</a>
           <a href="/author" className="hover:text-tx-muted transition-colors py-1">Author</a>
-          <a href="/admin" className="hover:text-tx-muted transition-colors py-1">Admin</a>
         </div>
       </div>
     </footer>

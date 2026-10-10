@@ -1,43 +1,19 @@
+import { isAiConfigured } from "@/lib/ai-config";
 import TalkToMrPoppinClient from "./TalkToMrPoppinClient";
 
 const starters = [
-  "What is the main argument in the essay about self-worth and AI?",
-  "How do the essays connect awareness with behavior?",
-  "Which essay best explains identity and ego?",
-  "What themes repeat across the archive?",
+  "What do the essays say about noticing tension in the body?",
+  "How do awareness and habit show up across the archive?",
+  "Where do the essays look at desire without moralizing it?",
+  "What is the knot, in the sense of The Mechanics of the Knots?",
 ];
 
 export default function TalkToMrPoppinPage() {
+  const configured = isAiConfigured();
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-      <div className="grid lg:grid-cols-[1.1fr_1.2fr] gap-8 lg:gap-10 items-start">
-        <section className="space-y-6 fade-up">
-          <p className="text-accent text-sm font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-            Ask the archive a question,
-            <span className="text-accent"> and let the essays answer.</span>
-          </h1>
-          <p className="text-tx-muted text-base sm:text-lg leading-relaxed max-w-xl">
-            This space is grounded in the essay library. It searches the writing first, then uses the model to turn those passages into a conversation.
-          </p>
-
-          <div className="p-5 sm:p-6 bg-bg-card border border-white/5 rounded-2xl">
-            <p className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">Try asking</p>
-            <div className="flex flex-wrap gap-2">
-              {starters.map(prompt => (
-                <span
-                  key={prompt}
-                  className="px-3 py-2 rounded-full bg-white/[0.03] border border-white/5 text-tx-muted text-sm leading-snug"
-                >
-                  {prompt}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <TalkToMrPoppinClient starters={starters} />
-      </div>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      <TalkToMrPoppinClient starters={starters} configured={configured} />
     </div>
   );
 }
