@@ -32,15 +32,24 @@ async function getCount(day: string, subjectType: "user" | "anon" | "ip", subjec
   return rows[0]?.question_count ?? 0;
 }
 
-async function bump(day: string, subjectType: "user" | "anon" | "ip", subjectKey: string) {
-  await sql`
+/** Atomically increment if under limit; returns new count or null if the cap was hit. */
+async function bumpIfUnderLimit(
+  day: string,
+  subjectType: "user" | "anon" | "ip",
+  subjectKey: string,
+  limit: number,
+): Promise<number | null> {
+  const rows = await sql<UsageRow[]>`
     insert into ai_chat_usage (day_ist, subject_type, subject_key, question_count)
     values (${day}::date, ${subjectType}, ${subjectKey}, 1)
     on conflict (day_ist, subject_type, subject_key)
     do update set
       question_count = ai_chat_usage.question_count + 1,
       updated_at = now()
+    where ai_chat_usage.question_count < ${limit}
+    returning question_count
   `;
+  return rows[0]?.question_count ?? null;
 }
 
 export type QuotaIdentity =
@@ -95,24 +104,78 @@ export async function getQuotaSnapshot(identity: QuotaIdentity): Promise<QuotaSn
 export async function consumeQuota(
   identity: QuotaIdentity,
 ): Promise<QuotaSnapshot & { consumed: boolean }> {
-  const before = await getQuotaSnapshot(identity);
-  if (!before.allowed) {
-    return { ...before, consumed: false };
-  }
+  const day = istDay();
 
-  const day = before.dayIst;
   if (identity.kind === "user") {
-    await bump(day, "user", identity.userId);
-  } else {
-    const ipKey = hashIp(identity.ip);
-    await Promise.all([bump(day, "anon", identity.anonId), bump(day, "ip", ipKey)]);
+    const used = await bumpIfUnderLimit(day, "user", identity.userId, USER_DAILY_LIMIT);
+    if (used === null) {
+      const before = await getQuotaSnapshot(identity);
+      return { ...before, allowed: false, consumed: false };
+    }
+    return {
+      allowed: true,
+      remaining: Math.max(0, USER_DAILY_LIMIT - used),
+      limit: USER_DAILY_LIMIT,
+      used,
+      dayIst: day,
+      signedIn: true,
+      consumed: true,
+    };
   }
 
-  const after = await getQuotaSnapshot(identity);
+  const ipKey = hashIp(identity.ip);
+  // Lock both counters in one transaction so concurrent requests cannot slip past the cap,
+  // and so a failed second bump rolls back the first.
+  const used = await sql.begin(async tx => {
+    await tx`
+      insert into ai_chat_usage (day_ist, subject_type, subject_key, question_count)
+      values
+        (${day}::date, ${"anon"}, ${identity.anonId}, 0),
+        (${day}::date, ${"ip"}, ${ipKey}, 0)
+      on conflict (day_ist, subject_type, subject_key) do nothing
+    `;
+
+    const rows = await tx<{ question_count: number }[]>`
+      select question_count
+      from ai_chat_usage
+      where day_ist = ${day}::date
+        and (
+          (subject_type = ${"anon"} and subject_key = ${identity.anonId})
+          or (subject_type = ${"ip"} and subject_key = ${ipKey})
+        )
+      for update
+    `;
+    const current = rows.reduce((max, row) => Math.max(max, row.question_count), 0);
+    if (current >= ANON_DAILY_LIMIT) {
+      return null;
+    }
+
+    await tx`
+      update ai_chat_usage
+      set question_count = question_count + 1,
+          updated_at = now()
+      where day_ist = ${day}::date
+        and (
+          (subject_type = ${"anon"} and subject_key = ${identity.anonId})
+          or (subject_type = ${"ip"} and subject_key = ${ipKey})
+        )
+    `;
+
+    return current + 1;
+  });
+
+  if (used === null) {
+    const before = await getQuotaSnapshot(identity);
+    return { ...before, allowed: false, consumed: false };
+  }
+
   return {
-    ...after,
-    // This request was within the limit before the bump.
     allowed: true,
+    remaining: Math.max(0, ANON_DAILY_LIMIT - used),
+    limit: ANON_DAILY_LIMIT,
+    used,
+    dayIst: day,
+    signedIn: false,
     consumed: true,
   };
 }

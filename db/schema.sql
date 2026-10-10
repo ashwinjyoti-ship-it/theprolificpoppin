@@ -148,7 +148,7 @@ create table if not exists sessions (
 
 create index if not exists sessions_userId_idx on sessions ("userId");
 
-create table if not exists verification_tokens (
+create table if not exists verification_token (
   identifier text not null,
   token text not null,
   expires timestamptz not null,

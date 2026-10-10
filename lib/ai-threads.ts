@@ -14,9 +14,14 @@ export async function claimThreadForUser(params: {
         updated_at = now()
     where id = ${params.threadId}
       and (
-        user_id is null
-        or user_id = ${params.userId}
-        ${params.anonId ? sql`or anonymous_id = ${params.anonId}::uuid` : sql``}
+        user_id = ${params.userId}
+        or (
+          user_id is null
+          and (
+            anonymous_id is null
+            ${params.anonId ? sql`or anonymous_id = ${params.anonId}::uuid` : sql``}
+          )
+        )
       )
     returning id
   `;
@@ -37,10 +42,12 @@ export async function assertThreadReadable(params: {
   `;
   const row = rows[0];
   if (!row) return false;
+  // Once claimed by an account, only that user may read (cookie alone must not).
+  if (row.user_id) {
+    return Boolean(params.userId && row.user_id === params.userId);
+  }
   // Legacy threads with no owner stay readable (localStorage restore).
-  if (!row.user_id && !row.anonymous_id) return true;
-  if (params.userId && row.user_id === params.userId) return true;
+  if (!row.anonymous_id) return true;
   if (params.anonId && row.anonymous_id === params.anonId) return true;
-  if (params.userId && !row.user_id && row.anonymous_id === params.anonId) return true;
   return false;
 }

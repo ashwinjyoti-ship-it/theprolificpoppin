@@ -257,7 +257,7 @@ export async function saveDiscussionExchange(params: {
               user_prompt = ${params.question},
               assistant_summary = ${params.answer},
               status = ${"answered"},
-              user_id = coalesce(${params.userId || null}, user_id),
+              user_id = coalesce(user_id, ${params.userId || null}),
               anonymous_id = coalesce(anonymous_id, ${params.anonymousId || null}::uuid),
               updated_at = now()
           where id = ${params.threadId}

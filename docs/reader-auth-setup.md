@@ -19,7 +19,7 @@ Or paste `db/migrations/20261010_reader_auth_and_quota.sql` into the Neon SQL ed
 
 **Must be run manually** before reader sign-in / durable quotas work. Safe to re-run (`IF NOT EXISTS`).
 
-Creates Auth.js tables (`users`, `accounts`, `sessions`, `verification_tokens`), `ai_chat_usage`, and `user_id` / `anonymous_id` on `ai_discussion_threads`.
+Creates Auth.js tables (`users`, `accounts`, `sessions`, `verification_token`), `ai_chat_usage`, and `user_id` / `anonymous_id` on `ai_discussion_threads`.
 
 ## Quotas
 

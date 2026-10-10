@@ -40,7 +40,15 @@ create table if not exists sessions (
 
 create index if not exists sessions_userId_idx on sessions ("userId");
 
-create table if not exists verification_tokens (
+-- Auth.js / @auth/pg-adapter uses singular `verification_token` (not plural).
+do $$ begin
+  if to_regclass('public.verification_tokens') is not null
+     and to_regclass('public.verification_token') is null then
+    alter table verification_tokens rename to verification_token;
+  end if;
+end $$;
+
+create table if not exists verification_token (
   identifier text not null,
   token text not null,
   expires timestamptz not null,
