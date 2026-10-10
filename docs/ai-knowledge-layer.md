@@ -1,12 +1,12 @@
 # AI Knowledge Layer
 
-This project now has a database foundation for future AI work on the essay archive.
+Database + chat foundation for Talk to Mr. Poppin and future retrieval work.
 
 ## What the layer is for
 
 - Store each essay as a canonical record in Postgres
 - Split essays into searchable chunks for retrieval
-- Attach embeddings later for natural-language search
+- (Optional later) Attach embeddings for semantic search
 - Keep discussion threads and messages tied to the essay knowledge base
 - Capture training examples for future model tuning or evaluation
 
@@ -18,22 +18,38 @@ This project now has a database foundation for future AI work on the essay archi
 - `ai_discussion_messages`
 - `ai_training_examples`
 
-## How the site should use it later
+No new Neon migration is required for the Mr. Poppin chat work — threads/messages already exist in `db/schema.sql`.
 
-1. Sync the current essay source into `essays`
-2. Chunk each essay into `essay_chunks`
-3. Create embeddings for each chunk
-4. Retrieve the most relevant chunks for a user question
-5. Feed the retrieved context to the model
-6. Store the conversation and any useful examples back in Postgres
+## Talk to Mr. Poppin
 
-## Current status
+Route: `/talk-to-mr-poppin` · API: `/api/ai/query`
 
-- Neon project created and connected locally through `.env.local`
-- The website is still static, so it does not query Neon yet
-- The `lib/knowledge.ts` helper now defines the shape of the future knowledge documents and discussion prompts
+### Env vars (Vercel → `theprolificpoppin` project)
 
-## Next step when ready
+| Var | Required | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Preferred | Primary provider |
+| `ANTHROPIC_MODEL` | No | Default `claude-sonnet-5-5` |
+| `OPENAI_API_KEY` | Fallback | Used only if Anthropic key is unset |
+| `OPENAI_MODEL` | No | Default `gpt-4o-mini` |
+| `DATABASE_URL` | Yes | Neon — stores questions/answers |
 
-Add a server-side API layer or a separate worker that reads `DATABASE_URL`, writes essay records into `essays`, and handles retrieval plus chat responses.
+Keys are server-side only. Never expose them to the client.
 
+### Behavior notes
+
+- Retrieval skips greetings/small talk and never falls back to score-0 chunks.
+- Per-IP rate limit: in-memory sliding window on the Vercel isolate (12 req / 60s). Free, no Redis; cold starts reset the map.
+- Questions are stored in Neon (`ai_discussion_*`) to improve the archive; the page discloses this in one line.
+- Thread id is persisted in `localStorage` and restored via `GET /api/ai/query?threadId=…`.
+- Anthropic Sonnet 5.5: sends `thinking: { type: "between_tools" }` (docs reject `"disabled"` on this model) plus `output_config.effort: "low"` so up-front thinking does not eat `max_tokens`. `maxOutputTokens` is 2048. If `stop_reason` is still `max_tokens`, incomplete markdown links are stripped before the reader sees them.
+
+## How retrieval works today
+
+1. Keyword tokenize the question (cheap, no embeddings)
+2. Score published `essay_chunks` by term overlap with title/slug/content
+3. Return only positive-score hits (or essay-scoped hits)
+4. Feed passages + capped history to Anthropic (or OpenAI fallback)
+5. Persist the exchange
+
+Embeddings remain optional; the `essay_chunks.embedding` column is unused for now.
