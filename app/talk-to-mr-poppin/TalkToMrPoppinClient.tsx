@@ -604,7 +604,7 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
               </button>
             </div>
 
-            <div className="space-y-3 sm:space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
+            <div className="chat-scroll space-y-3 sm:space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
               {messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
@@ -627,9 +627,6 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
                   )}
                   {message.role === "assistant" && message.sources && message.sources.length > 0 && (
                     <SourceList sources={message.sources} />
-                  )}
-                  {message.role === "assistant" && message.showSignIn && !signedIn && (
-                    <SignInPanel providers={providers} />
                   )}
                 </div>
               ))}

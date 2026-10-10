@@ -156,3 +156,24 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle-icon.is-spinning { animation: none; }
 }
+
+/* Chat thread scrollbar — muted in both themes (no bright white track) */
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--tx-dim) 55%, transparent) transparent;
+}
+.chat-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--tx-dim) 55%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--tx-muted) 70%, transparent);
+}
