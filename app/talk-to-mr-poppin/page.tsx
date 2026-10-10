@@ -1,4 +1,6 @@
+import { readerAuthProviders } from "@/auth";
 import { isAiConfigured } from "@/lib/ai-config";
+import ReaderSessionProvider from "./ReaderSessionProvider";
 import TalkToMrPoppinClient from "./TalkToMrPoppinClient";
 
 const starters = [
@@ -10,10 +12,13 @@ const starters = [
 
 export default function TalkToMrPoppinPage() {
   const configured = isAiConfigured();
+  const providers = readerAuthProviders();
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-      <TalkToMrPoppinClient starters={starters} configured={configured} />
+      <ReaderSessionProvider>
+        <TalkToMrPoppinClient starters={starters} configured={configured} initialProviders={providers} />
+      </ReaderSessionProvider>
     </div>
   );
 }
