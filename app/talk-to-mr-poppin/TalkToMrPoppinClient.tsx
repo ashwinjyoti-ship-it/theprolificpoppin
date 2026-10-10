@@ -532,7 +532,7 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
       <section className="order-2 lg:order-1 space-y-5 hidden lg:block">
         <p className="text-accent text-sm font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-          Ask about something you&apos;ve noticed.
+          Ask something you&apos;ve noticed about yourself.
         </h1>
         <p className="text-tx-muted text-base sm:text-lg leading-relaxed max-w-xl">{intro}</p>
 
@@ -562,7 +562,7 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
           <div className="min-w-0 space-y-1">
             <p className="text-accent text-xs font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
             <h1 className="font-serif text-xl font-bold tracking-tight leading-tight">
-              Ask about something you&apos;ve noticed.
+              Ask something you&apos;ve noticed about yourself.
             </h1>
           </div>
         </div>
