@@ -91,17 +91,26 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
   // Bumped on send/reset so in-flight restore or replies never clobber the live UI.
   const generationRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const restoreAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const restoreGeneration = generationRef.current;
+    const restoreController = new AbortController();
+    restoreAbortRef.current = restoreController;
+
+    function restoreStillCurrent() {
+      return !cancelled && generationRef.current === restoreGeneration;
+    }
 
     async function restore() {
       try {
         const saved = localStorage.getItem(THREAD_STORAGE_KEY);
         if (!saved || !/^[0-9a-f-]{36}$/i.test(saved)) return;
 
-        const response = await fetch(`/api/ai/query?threadId=${encodeURIComponent(saved)}`);
+        const response = await fetch(`/api/ai/query?threadId=${encodeURIComponent(saved)}`, {
+          signal: restoreController.signal,
+        });
         if (!response.ok) {
           localStorage.removeItem(THREAD_STORAGE_KEY);
           return;
@@ -109,7 +118,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
 
         const payload = await response.json();
         // Skip if unmounted, user started a new chat, or a live send already began.
-        if (cancelled || generationRef.current !== restoreGeneration) return;
+        if (!restoreStillCurrent()) return;
 
         const restored: ChatMessage[] = Array.isArray(payload.messages)
           ? payload.messages
@@ -128,15 +137,17 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
           setMessages([{ role: "assistant", content: MR_POPPIN_OPENING }, ...restored]);
         }
       } catch {
-        /* ignore */
+        /* ignore abort / network */
       } finally {
-        if (!cancelled) setRestoring(false);
+        // Stale restore must not touch state after New chat (including unlocking... or re-locking).
+        if (restoreStillCurrent()) setRestoring(false);
       }
     }
 
     void restore();
     return () => {
       cancelled = true;
+      restoreController.abort();
       abortRef.current?.abort();
     };
   }, []);
@@ -323,9 +334,13 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
 
   function resetConversation() {
     generationRef.current += 1;
+    restoreAbortRef.current?.abort();
+    restoreAbortRef.current = null;
     abortRef.current?.abort();
     abortRef.current = null;
     setLoading(false);
+    // Unlock immediately; do not wait for a discarded restore fetch to finish.
+    setRestoring(false);
     setMessages([{ role: "assistant", content: MR_POPPIN_OPENING }]);
     persistThread(null);
     setInput("");
