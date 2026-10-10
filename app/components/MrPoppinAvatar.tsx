@@ -17,21 +17,17 @@ export function MrPoppinAvatar({ size = 28, className = "" }: { size?: Size; cla
   );
 }
 
-/** Full figure for the desktop intro panel (cream art on a soft card). */
+/** Full-figure hero for the desktop intro — square asset, no card or letterboxing. */
 export function MrPoppinHero({ className = "" }: { className?: string }) {
   return (
-    <div
-      className={`overflow-hidden rounded-2xl border border-white/10 bg-[#F5EDE0] shadow-inner ${className}`}
-    >
-      <Image
-        src="/mr-poppin/mr-poppin-full-1024.png"
-        alt={ALT}
-        width={1024}
-        height={1024}
-        className="w-full h-auto max-w-[220px] mx-auto block"
-        sizes="(min-width: 1024px) 220px, 0px"
-        priority
-      />
-    </div>
+    <Image
+      src="/mr-poppin/mr-poppin-full-1024-transparent.png"
+      alt={ALT}
+      width={240}
+      height={240}
+      className={`block h-auto w-[min(100%,240px)] ${className}`}
+      sizes="240px"
+      priority
+    />
   );
 }
