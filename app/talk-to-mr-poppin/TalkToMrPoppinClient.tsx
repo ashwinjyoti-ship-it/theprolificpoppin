@@ -321,17 +321,16 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
       </section>
 
       <section className="order-1 lg:order-2 lg:sticky lg:top-24">
-        <div className="lg:hidden mb-4 space-y-2">
-          <p className="text-accent text-sm font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
-          <h1 className="font-serif text-2xl font-bold tracking-tight leading-tight">
+        <div className="lg:hidden mb-3 space-y-1.5">
+          <p className="text-accent text-xs font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
+          <h1 className="font-serif text-xl font-bold tracking-tight leading-tight">
             Ask about something you&apos;ve noticed.
           </h1>
-          <p className="text-tx-muted text-sm leading-relaxed">{intro}</p>
         </div>
 
         <div className="relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 bg-bg-card shadow-2xl shadow-black/20">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(244,180,0,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.04),transparent_30%)] pointer-events-none" />
-          <div className="relative p-3 sm:p-6 lg:p-8 flex flex-col h-[min(70dvh,560px)] sm:h-[min(72vh,640px)]">
+          <div className="relative p-3 sm:p-6 lg:p-8 flex flex-col h-[min(78dvh,620px)] sm:h-[min(72vh,640px)]">
             <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4 shrink-0">
               <div>
                 <p className="text-tx-dim text-xs font-mono tracking-widest uppercase">Conversation</p>
