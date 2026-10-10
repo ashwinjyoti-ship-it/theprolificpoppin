@@ -214,6 +214,17 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
                 }
                 return next;
               });
+            } else if (event.type === "replace" && typeof event.text === "string") {
+              // Server repaired a truncated mid-link reply.
+              answer = event.text;
+              setMessages(prev => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last?.role === "assistant") {
+                  next[next.length - 1] = { ...last, content: answer, sources };
+                }
+                return next;
+              });
             } else if (event.type === "done") {
               if (event.threadId) persistThread(event.threadId);
               if (typeof event.answer === "string") answer = event.answer;

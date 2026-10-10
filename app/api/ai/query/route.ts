@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AI_LIMITS, getAiProviderConfig, isAiConfigured } from "@/lib/ai-config";
 import { generateModelReply, streamModelReply } from "@/lib/ai-providers";
 import { checkRateLimit, getClientIp } from "@/lib/ai-rate-limit";
+import { sanitizeModelReply, wasTruncatedByStop } from "@/lib/ai-reply";
 import {
   buildArchiveOnlyAnswer,
   buildContextBlock,
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
     if (stream && config.provider === "anthropic") {
       const encoder = new TextEncoder();
       let fullAnswer = "";
+      let stopReason: string | null = null;
 
       const readable = new ReadableStream({
         async start(controller) {
@@ -136,14 +138,18 @@ export async function POST(request: Request) {
               sources: publicSourceList,
             });
 
-            for await (const delta of streamModelReply(config, {
+            for await (const chunk of streamModelReply(config, {
               system,
               question,
               history,
               contextBlock,
             })) {
-              fullAnswer += delta;
-              send({ type: "delta", text: delta });
+              if (chunk.type === "delta") {
+                fullAnswer += chunk.text;
+                send({ type: "delta", text: chunk.text });
+              } else {
+                stopReason = chunk.stopReason;
+              }
             }
 
             if (!fullAnswer.trim()) {
@@ -151,18 +157,31 @@ export async function POST(request: Request) {
               send({ type: "delta", text: fullAnswer });
             }
 
+            const truncated = wasTruncatedByStop(stopReason);
+            const answer = sanitizeModelReply(fullAnswer, truncated);
+            // If we repaired a mid-link cut, push a replace so the client doesn't keep a half link.
+            if (answer !== fullAnswer) {
+              send({ type: "replace", text: answer });
+            }
+
             const persistedThreadId = await saveDiscussionExchange({
               question,
-              answer: fullAnswer,
+              answer,
               sources,
               essayId: primaryEssayId,
               threadId,
             });
 
-            send({ type: "done", threadId: persistedThreadId, answer: fullAnswer });
+            send({
+              type: "done",
+              threadId: persistedThreadId,
+              answer,
+              truncated,
+            });
             controller.close();
           } catch {
-            if (!fullAnswer.trim()) {
+            const answer = sanitizeModelReply(fullAnswer, true);
+            if (!answer.trim()) {
               send({
                 type: "error",
                 error: "Mr. Poppin couldn't finish that reply. Please try again in a moment.",
@@ -171,14 +190,14 @@ export async function POST(request: Request) {
               try {
                 const persistedThreadId = await saveDiscussionExchange({
                   question,
-                  answer: fullAnswer,
+                  answer,
                   sources,
                   essayId: primaryEssayId,
                   threadId,
                 });
-                send({ type: "done", threadId: persistedThreadId, answer: fullAnswer });
+                send({ type: "done", threadId: persistedThreadId, answer, truncated: true });
               } catch {
-                send({ type: "done", threadId: threadId || null, answer: fullAnswer });
+                send({ type: "done", threadId: threadId || null, answer, truncated: true });
               }
             }
             controller.close();
@@ -215,6 +234,7 @@ export async function POST(request: Request) {
       configured: true,
       model: generated.model,
       provider: generated.provider,
+      truncated: generated.truncated,
       sources: publicSourceList,
     });
   } catch (err) {

@@ -1,4 +1,10 @@
-import { AI_LIMITS, type AiProviderConfig } from "@/lib/ai-config";
+import {
+  AI_LIMITS,
+  ANTHROPIC_CHAT_EFFORT,
+  ANTHROPIC_CHAT_THINKING,
+  type AiProviderConfig,
+} from "@/lib/ai-config";
+import { sanitizeModelReply, wasTruncatedByStop } from "@/lib/ai-reply";
 import type { DiscussionMessage } from "@/lib/essay-ai";
 
 export type ChatTurn = {
@@ -12,6 +18,18 @@ export type GenerateParams = {
   history: DiscussionMessage[];
   contextBlock: string;
 };
+
+export type ModelReply = {
+  answer: string;
+  provider: string;
+  model: string;
+  truncated: boolean;
+  stopReason: string | null;
+};
+
+export type StreamChunk =
+  | { type: "delta"; text: string }
+  | { type: "end"; stopReason: string | null };
 
 function toChatTurns(history: DiscussionMessage[], question: string, contextBlock: string): ChatTurn[] {
   const turns: ChatTurn[] = [];
@@ -49,8 +67,35 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-async function callAnthropic(config: AiProviderConfig, params: GenerateParams): Promise<string> {
+function anthropicBody(config: AiProviderConfig, params: GenerateParams, stream: boolean) {
   const turns = toChatTurns(params.history, params.question, params.contextBlock);
+  return {
+    model: config.model,
+    max_tokens: AI_LIMITS.maxOutputTokens,
+    temperature: 0.55,
+    // Cap up-front thinking so tokens go to the visible reply (see ANTHROPIC_CHAT_THINKING).
+    thinking: ANTHROPIC_CHAT_THINKING,
+    output_config: { effort: ANTHROPIC_CHAT_EFFORT },
+    system: params.system,
+    stream: stream || undefined,
+    messages: turns.map(turn => ({
+      role: turn.role === "assistant" ? "assistant" : "user",
+      content: turn.content,
+    })),
+  };
+}
+
+function extractAnthropicText(content: Array<{ type?: string; text?: string }> | undefined): string {
+  return (
+    content
+      ?.filter(part => part.type === "text" && part.text)
+      .map(part => part.text)
+      .join("\n")
+      .trim() || ""
+  );
+}
+
+async function callAnthropic(config: AiProviderConfig, params: GenerateParams): Promise<ModelReply> {
   const response = await withTimeout(
     fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -59,16 +104,7 @@ async function callAnthropic(config: AiProviderConfig, params: GenerateParams): 
         "x-api-key": config.apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: AI_LIMITS.maxOutputTokens,
-        temperature: 0.55,
-        system: params.system,
-        messages: turns.map(turn => ({
-          role: turn.role === "assistant" ? "assistant" : "user",
-          content: turn.content,
-        })),
-      }),
+      body: JSON.stringify(anthropicBody(config, params, false)),
     }),
     AI_LIMITS.providerTimeoutMs,
     "Anthropic",
@@ -81,18 +117,24 @@ async function callAnthropic(config: AiProviderConfig, params: GenerateParams): 
 
   const payload = (await response.json()) as {
     content?: Array<{ type?: string; text?: string }>;
+    stop_reason?: string | null;
   };
-  const text = payload.content
-    ?.filter(part => part.type === "text" && part.text)
-    .map(part => part.text)
-    .join("\n")
-    .trim();
 
-  if (!text) throw new Error("Anthropic returned an empty reply");
-  return text;
+  const stopReason = payload.stop_reason ?? null;
+  const raw = extractAnthropicText(payload.content);
+  if (!raw) throw new Error("Anthropic returned an empty reply");
+
+  const truncated = wasTruncatedByStop(stopReason);
+  return {
+    answer: sanitizeModelReply(raw, truncated),
+    provider: config.provider,
+    model: config.model,
+    truncated,
+    stopReason,
+  };
 }
 
-async function callOpenAI(config: AiProviderConfig, params: GenerateParams): Promise<string> {
+async function callOpenAI(config: AiProviderConfig, params: GenerateParams): Promise<ModelReply> {
   const turns = toChatTurns(params.history, params.question, params.contextBlock);
   const response = await withTimeout(
     fetch("https://api.openai.com/v1/chat/completions", {
@@ -119,44 +161,55 @@ async function callOpenAI(config: AiProviderConfig, params: GenerateParams): Pro
   );
 
   if (!response.ok) {
-    await response.text();
+    await response.text().catch(() => "");
     throw new Error(`OpenAI request failed (${response.status})`);
   }
 
   const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{
+      message?: { content?: string };
+      finish_reason?: string | null;
+    }>;
   };
-  const text = payload.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error("OpenAI returned an empty reply");
-  return text;
+  const choice = payload.choices?.[0];
+  const raw = choice?.message?.content?.trim() || "";
+  if (!raw) throw new Error("OpenAI returned an empty reply");
+
+  const stopReason = choice?.finish_reason ?? null;
+  const truncated = stopReason === "length";
+  return {
+    answer: sanitizeModelReply(raw, truncated),
+    provider: config.provider,
+    model: config.model,
+    truncated,
+    stopReason,
+  };
 }
 
 export async function generateModelReply(
   config: AiProviderConfig,
   params: GenerateParams,
-): Promise<{ answer: string; provider: string; model: string }> {
-  const answer =
-    config.provider === "anthropic"
-      ? await callAnthropic(config, params)
-      : await callOpenAI(config, params);
-
-  return { answer, provider: config.provider, model: config.model };
+): Promise<ModelReply> {
+  return config.provider === "anthropic"
+    ? callAnthropic(config, params)
+    : callOpenAI(config, params);
 }
 
-/** Stream Anthropic SSE; yields text deltas. Falls back to full reply for OpenAI. */
+/** Stream Anthropic SSE as text deltas, then an end chunk with stop_reason. */
 export async function* streamModelReply(
   config: AiProviderConfig,
   params: GenerateParams,
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<StreamChunk, void, unknown> {
   if (config.provider !== "anthropic") {
-    const { answer } = await generateModelReply(config, params);
-    yield answer;
+    const reply = await generateModelReply(config, params);
+    yield { type: "delta", text: reply.answer };
+    yield { type: "end", stopReason: reply.stopReason };
     return;
   }
 
-  const turns = toChatTurns(params.history, params.question, params.contextBlock);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AI_LIMITS.providerTimeoutMs);
+  let stopReason: string | null = null;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -166,17 +219,7 @@ export async function* streamModelReply(
         "x-api-key": config.apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: AI_LIMITS.maxOutputTokens,
-        temperature: 0.55,
-        stream: true,
-        system: params.system,
-        messages: turns.map(turn => ({
-          role: turn.role === "assistant" ? "assistant" : "user",
-          content: turn.content,
-        })),
-      }),
+      body: JSON.stringify(anthropicBody(config, params, true)),
       signal: controller.signal,
     });
 
@@ -204,10 +247,14 @@ export async function* streamModelReply(
         try {
           const event = JSON.parse(data) as {
             type?: string;
-            delta?: { type?: string; text?: string };
+            delta?: { type?: string; text?: string; stop_reason?: string | null };
           };
+          // Only stream visible text; ignore thinking deltas if any still appear.
           if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
-            yield event.delta.text;
+            yield { type: "delta", text: event.delta.text };
+          }
+          if (event.type === "message_delta" && event.delta && "stop_reason" in event.delta) {
+            stopReason = event.delta.stop_reason ?? null;
           }
         } catch {
           /* skip malformed SSE chunks */
@@ -217,4 +264,6 @@ export async function* streamModelReply(
   } finally {
     clearTimeout(timer);
   }
+
+  yield { type: "end", stopReason };
 }
