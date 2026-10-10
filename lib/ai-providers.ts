@@ -69,10 +69,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 function anthropicBody(config: AiProviderConfig, params: GenerateParams, stream: boolean) {
   const turns = toChatTurns(params.history, params.question, params.contextBlock);
+  // Do not send temperature/top_p/top_k with output_config — Sonnet 5.5 returns 400.
   return {
     model: config.model,
     max_tokens: AI_LIMITS.maxOutputTokens,
-    temperature: 0.55,
     // Cap up-front thinking so tokens go to the visible reply (see ANTHROPIC_CHAT_THINKING).
     thinking: ANTHROPIC_CHAT_THINKING,
     output_config: { effort: ANTHROPIC_CHAT_EFFORT },

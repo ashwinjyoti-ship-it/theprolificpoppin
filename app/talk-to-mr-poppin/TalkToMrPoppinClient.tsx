@@ -88,9 +88,12 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
   const [restoring, setRestoring] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Bumped on send/reset so in-flight restore or replies never clobber the live UI.
+  const generationRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    const restoreGeneration = generationRef.current;
 
     async function restore() {
       try {
@@ -104,7 +107,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
         }
 
         const payload = await response.json();
-        if (cancelled) return;
+        if (cancelled || generationRef.current !== restoreGeneration) return;
 
         const restored: ChatMessage[] = Array.isArray(payload.messages)
           ? payload.messages
@@ -151,7 +154,10 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
 
   async function submitQuestion(question: string) {
     const trimmed = question.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || restoring) return;
+
+    const requestGeneration = ++generationRef.current;
+    const stillCurrent = () => generationRef.current === requestGeneration;
 
     setError("");
     setLoading(true);
@@ -169,6 +175,8 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
         }),
       });
 
+      if (!stillCurrent()) return;
+
       const contentType = response.headers.get("content-type") || "";
 
       if (contentType.includes("application/x-ndjson") && response.body) {
@@ -181,6 +189,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          if (!stillCurrent()) return;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
@@ -200,6 +209,8 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
             } catch {
               continue;
             }
+
+            if (!stillCurrent()) return;
 
             if (event.type === "meta" && Array.isArray(event.sources)) {
               sources = event.sources;
@@ -242,9 +253,11 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
           }
         }
 
+        if (!stillCurrent()) return;
         if (!answer.trim()) throw new Error("Could not generate a reply.");
       } else {
         const payload = await response.json();
+        if (!stillCurrent()) return;
         if (!response.ok) throw new Error(payload?.error || "Could not generate a reply.");
 
         if (payload.threadId) persistThread(payload.threadId);
@@ -262,6 +275,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
         });
       }
     } catch (err) {
+      if (!stillCurrent()) return;
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
       setMessages(prev => {
@@ -275,8 +289,10 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
         return next;
       });
     } finally {
-      setLoading(false);
-      inputRef.current?.focus();
+      if (stillCurrent()) {
+        setLoading(false);
+        inputRef.current?.focus();
+      }
     }
   }
 
@@ -293,6 +309,8 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
   }
 
   function resetConversation() {
+    generationRef.current += 1;
+    setLoading(false);
     setMessages([{ role: "assistant", content: MR_POPPIN_OPENING }]);
     persistThread(null);
     setInput("");
@@ -320,7 +338,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
               <button
                 key={prompt}
                 type="button"
-                disabled={loading}
+                disabled={loading || restoring}
                 onClick={() => void submitQuestion(prompt)}
                 className="px-3 py-2 rounded-full bg-white/[0.03] border border-white/5 text-tx-muted text-sm leading-snug hover:border-accent/20 hover:text-accent transition-colors text-left"
               >
@@ -399,16 +417,17 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
                 onKeyDown={handleKeyDown}
                 rows={2}
                 maxLength={2000}
+                disabled={restoring}
                 placeholder="Something you've noticed in yourself…"
-                className="w-full rounded-2xl border border-white/10 bg-bg px-3 sm:px-4 py-2.5 sm:py-3 text-tx placeholder:text-tx-dim focus:outline-none focus:border-accent/40 resize-none"
+                className="w-full rounded-2xl border border-white/10 bg-bg px-3 sm:px-4 py-2.5 sm:py-3 text-tx placeholder:text-tx-dim focus:outline-none focus:border-accent/40 resize-none disabled:opacity-60"
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 <button
                   type="submit"
-                  disabled={loading || !input.trim()}
+                  disabled={loading || restoring || !input.trim()}
                   className={`px-5 py-2.5 sm:py-3 rounded-xl font-medium transition-all ${
-                    loading || !input.trim()
+                    loading || restoring || !input.trim()
                       ? "bg-white/5 text-tx-dim cursor-not-allowed"
                       : "bg-accent text-bg hover:bg-accent-light"
                   }`}
@@ -432,7 +451,7 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
               <button
                 key={prompt}
                 type="button"
-                disabled={loading}
+                disabled={loading || restoring}
                 onClick={() => void submitQuestion(prompt)}
                 className="px-3 py-2 rounded-full border border-white/10 bg-white/[0.03] text-tx-muted text-sm hover:border-accent/20 hover:text-accent transition-colors text-left"
               >
