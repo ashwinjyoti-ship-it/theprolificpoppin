@@ -72,7 +72,7 @@ function anthropicBody(config: AiProviderConfig, params: GenerateParams, stream:
   return {
     model: config.model,
     max_tokens: AI_LIMITS.maxOutputTokens,
-    temperature: 0.55,
+    // claude-sonnet-5-5 rejects `temperature` (invalid_request_error: deprecated for this model).
     // Cap up-front thinking so tokens go to the visible reply (see ANTHROPIC_CHAT_THINKING).
     thinking: ANTHROPIC_CHAT_THINKING,
     output_config: { effort: ANTHROPIC_CHAT_EFFORT },
@@ -83,6 +83,21 @@ function anthropicBody(config: AiProviderConfig, params: GenerateParams, stream:
       content: turn.content,
     })),
   };
+}
+
+/** Log Anthropic error body (never the API key) and return a throwable message. */
+function anthropicHttpError(status: number, bodyText: string, label: string): Error {
+  let detail = "";
+  try {
+    const parsed = JSON.parse(bodyText) as { error?: { message?: string } };
+    detail = typeof parsed.error?.message === "string" ? parsed.error.message.trim() : "";
+  } catch {
+    detail = bodyText.replace(/\s+/g, " ").trim().slice(0, 400);
+  }
+  // Belt-and-suspenders: strip anything that looks like a key if it ever appears in the body.
+  const safe = detail.replace(/sk-ant-[A-Za-z0-9_-]+/g, "[redacted]").replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]");
+  console.error(`[ai/anthropic] ${label} ${status}: ${safe || "(empty error body)"}`);
+  return new Error(safe ? `${label} (${status}): ${safe}` : `${label} (${status})`);
 }
 
 function extractAnthropicText(content: Array<{ type?: string; text?: string }> | undefined): string {
@@ -111,8 +126,8 @@ async function callAnthropic(config: AiProviderConfig, params: GenerateParams): 
   );
 
   if (!response.ok) {
-    await response.text().catch(() => "");
-    throw new Error(`Anthropic request failed (${response.status})`);
+    const bodyText = await response.text().catch(() => "");
+    throw anthropicHttpError(response.status, bodyText, "Anthropic request failed");
   }
 
   const payload = (await response.json()) as {
@@ -224,8 +239,8 @@ export async function* streamModelReply(
     });
 
     if (!response.ok || !response.body) {
-      await response.text().catch(() => "");
-      throw new Error(`Anthropic stream failed (${response.status})`);
+      const bodyText = await response.text().catch(() => "");
+      throw anthropicHttpError(response.status, bodyText, "Anthropic stream failed");
     }
 
     const reader = response.body.getReader();
