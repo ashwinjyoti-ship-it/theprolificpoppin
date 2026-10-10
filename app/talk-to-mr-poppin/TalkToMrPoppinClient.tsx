@@ -326,6 +326,8 @@ export default function TalkToMrPoppinClient({ starters, configured }: Props) {
     abortRef.current?.abort();
     abortRef.current = null;
     setLoading(false);
+    // Unlock composer/starters immediately; generation bump already discards the restore hydrate.
+    setRestoring(false);
     setMessages([{ role: "assistant", content: MR_POPPIN_OPENING }]);
     persistThread(null);
     setInput("");
