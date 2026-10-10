@@ -266,7 +266,16 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
           signedIn: Boolean(payload.signedIn),
         });
         if (payload.providers) setProviders(payload.providers);
-        if (!payload.signedIn && payload.remaining === 0) setGateSignIn(true);
+        if (!payload.signedIn && payload.remaining === 0) {
+          setGateSignIn(true);
+          setMessages(prev => {
+            if (prev.some(m => m.showSignIn)) return prev;
+            return [
+              ...prev,
+              { role: "assistant", content: QUOTA_EXCEEDED_MESSAGE, showSignIn: true },
+            ];
+          });
+        }
       } catch {
         /* ignore */
       }
