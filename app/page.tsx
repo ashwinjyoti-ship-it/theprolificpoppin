@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getFeaturedEssays, getPublishedEssays } from "@/lib/server-data";
 
 export default async function Home() {
@@ -30,6 +31,13 @@ export default async function Home() {
                 Look Within <span className="text-base">&rarr;</span>
               </a>
               <a href="/talk-to-mr-poppin" className="inline-flex items-center justify-center gap-2 bg-white/[0.03] text-tx border border-white/10 px-6 py-3 sm:py-2.5 rounded-full text-sm font-medium hover:border-accent/20 hover:text-accent transition-all min-h-[44px]">
+                <Image
+                  src="/mr-poppin/mr-poppin-avatar-96.png"
+                  alt="Mr. Poppin, sipping chai on a stack of books"
+                  width={22}
+                  height={22}
+                  className="rounded-full"
+                />
                 Talk to Mr. Poppin <span className="text-base">&rarr;</span>
               </a>
             </div>

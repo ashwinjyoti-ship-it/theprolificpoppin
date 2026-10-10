@@ -2,6 +2,7 @@
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { MrPoppinAvatar, MrPoppinHero } from "@/app/components/MrPoppinAvatar";
 import { MR_POPPIN_OPENING } from "@/lib/knowledge";
 import { QUOTA_EXCEEDED_MESSAGE } from "@/lib/ai-quota-copy";
 
@@ -535,6 +536,8 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
         </h1>
         <p className="text-tx-muted text-base sm:text-lg leading-relaxed max-w-xl">{intro}</p>
 
+        <MrPoppinHero />
+
         <div className="p-5 sm:p-6 bg-bg-card border border-white/5 rounded-2xl">
           <p className="text-tx-dim text-xs font-mono tracking-widest uppercase mb-4">Try asking</p>
           <div className="flex flex-wrap gap-2">
@@ -554,37 +557,43 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
       </section>
 
       <section className="order-1 lg:order-2 lg:sticky lg:top-24">
-        <div className="lg:hidden mb-3 space-y-1.5">
-          <p className="text-accent text-xs font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
-          <h1 className="font-serif text-xl font-bold tracking-tight leading-tight">
-            Ask about something you&apos;ve noticed.
-          </h1>
+        <div className="lg:hidden mb-3 flex items-center gap-3">
+          <MrPoppinAvatar size={40} />
+          <div className="min-w-0 space-y-1">
+            <p className="text-accent text-xs font-mono tracking-widest uppercase">Talk to Mr. Poppin</p>
+            <h1 className="font-serif text-xl font-bold tracking-tight leading-tight">
+              Ask about something you&apos;ve noticed.
+            </h1>
+          </div>
         </div>
 
         <div className="relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 bg-bg-card shadow-2xl shadow-black/20">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(244,180,0,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.04),transparent_30%)] pointer-events-none" />
           <div className="relative p-3 sm:p-6 lg:p-8 flex flex-col h-[min(78dvh,620px)] sm:h-[min(72vh,640px)]">
             <div className="flex items-start justify-between gap-4 mb-3 sm:mb-4 shrink-0">
-              <div className="min-w-0">
-                <p className="text-tx-dim text-xs font-mono tracking-widest uppercase">Conversation</p>
-                <p className="text-sm text-tx-muted mt-1">
-                  {restoring ? "Restoring…" : threadId ? "Continuing thread" : "New thread"}
-                  {quota && !restoring ? ` · ${quota.remaining}/${quota.limit} left today` : ""}
-                </p>
-                {signedIn ? (
-                  <p className="text-xs text-tx-dim mt-1 truncate">
-                    Signed in as {accountLabel}{" "}
-                    <button
-                      type="button"
-                      onClick={() => void signOut({ callbackUrl: "/talk-to-mr-poppin" })}
-                      className="underline hover:text-accent"
-                    >
-                      Sign out
-                    </button>
+              <div className="min-w-0 flex items-start gap-2.5">
+                <MrPoppinAvatar size={28} className="mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-tx-dim text-xs font-mono tracking-widest uppercase">Conversation</p>
+                  <p className="text-sm text-tx-muted mt-1">
+                    {restoring ? "Restoring…" : threadId ? "Continuing thread" : "New thread"}
+                    {quota && !restoring ? ` · ${quota.remaining}/${quota.limit} left today` : ""}
                   </p>
-                ) : (
-                  <p className="text-xs text-tx-dim mt-1">5 free questions a day without signing in.</p>
-                )}
+                  {signedIn ? (
+                    <p className="text-xs text-tx-dim mt-1 truncate">
+                      Signed in as {accountLabel}{" "}
+                      <button
+                        type="button"
+                        onClick={() => void signOut({ callbackUrl: "/talk-to-mr-poppin" })}
+                        className="underline hover:text-accent"
+                      >
+                        Sign out
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-tx-dim mt-1">5 free questions a day without signing in.</p>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -605,7 +614,8 @@ export default function TalkToMrPoppinClient({ starters, configured, initialProv
                       : "mr-3 sm:mr-12 bg-black/15 border-white/5"
                   }`}
                 >
-                  <div className="mb-2">
+                  <div className="mb-2 flex items-center gap-2">
+                    {message.role === "assistant" && <MrPoppinAvatar size={24} />}
                     <span className="text-[10px] font-mono tracking-widest uppercase text-tx-dim">
                       {message.role === "user" ? "You" : "Mr. Poppin"}
                     </span>
